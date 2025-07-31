@@ -7,6 +7,10 @@ export default function BotTester() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState("");
+  const [chatIds, setChatIds] = useState("");
+  const [sendToAll, setSendToAll] = useState(false);
+  const [storedChatIds, setStoredChatIds] = useState<string[]>([]);
+  const [showStoredIds, setShowStoredIds] = useState(false);
 
   const sendMessage = async () => {
     if (!message.trim()) return;
@@ -18,7 +22,17 @@ export default function BotTester() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({
+          message,
+          chatIds: sendToAll
+            ? chatIds
+                .split(",")
+                .map((id) => id.trim())
+                .filter((id) => id)
+            : showStoredIds && storedChatIds.length > 0
+            ? storedChatIds
+            : undefined,
+        }),
       });
 
       const data = await res.json();
@@ -37,6 +51,11 @@ export default function BotTester() {
     try {
       const formData = new FormData();
       formData.append("image", imageFile);
+      if (sendToAll && chatIds) {
+        formData.append("chatIds", chatIds);
+      } else if (showStoredIds && storedChatIds.length > 0) {
+        formData.append("chatIds", storedChatIds.join(","));
+      }
 
       const res = await fetch("/api/bot/send-image", {
         method: "POST",
@@ -52,11 +71,118 @@ export default function BotTester() {
     }
   };
 
+  const loadStoredChatIds = async () => {
+    try {
+      const res = await fetch("/api/bot/chat-ids");
+      const data = await res.json();
+      if (data.success) {
+        setStoredChatIds(data.chatIds);
+        setShowStoredIds(true);
+      }
+    } catch (error) {
+      console.error("Error loading chat IDs:", error);
+    }
+  };
+
+  const clearStoredChatIds = async () => {
+    if (!confirm("Are you sure you want to clear all stored chat IDs?")) return;
+
+    try {
+      const res = await fetch("/api/bot/chat-ids", { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        setStoredChatIds([]);
+        setShowStoredIds(false);
+        setResponse("All chat IDs cleared");
+      }
+    } catch (error) {
+      setResponse("Error clearing chat IDs");
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
         Telegram Bot Tester
       </h2>
+
+      {/* Stored Chat IDs Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-700">
+            Stored Chat IDs
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={loadStoredChatIds}
+              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+            >
+              Load Stored IDs
+            </button>
+            <button
+              onClick={clearStoredChatIds}
+              className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        {showStoredIds && (
+          <div className="mb-4">
+            <div className="text-sm text-gray-600 mb-2">
+              Found {storedChatIds.length} stored chat IDs:
+            </div>
+            <textarea
+              value={storedChatIds.join(", ")}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
+              rows={3}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              These are automatically collected when users send /start to your
+              bot
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Multiple Chat IDs Section */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            type="checkbox"
+            id="sendToAll"
+            checked={sendToAll}
+            onChange={(e) => setSendToAll(e.target.checked)}
+            className="rounded"
+          />
+          <label
+            htmlFor="sendToAll"
+            className="text-sm font-medium text-gray-700"
+          >
+            Send to multiple chat IDs
+          </label>
+        </div>
+
+        {sendToAll && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Chat IDs (comma-separated)
+            </label>
+            <textarea
+              value={chatIds}
+              onChange={(e) => setChatIds(e.target.value)}
+              placeholder="123456789, 987654321, 555666777"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              rows={3}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Separate multiple chat IDs with commas
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Text Message Section */}
       <div className="mb-6">
@@ -121,7 +247,9 @@ export default function BotTester() {
         <ul className="text-sm text-blue-700 space-y-1">
           <li>• Set your bot token in the environment variables</li>
           <li>• Start your bot with /start command in Telegram</li>
-          <li>• Use this interface to test sending messages and images</li>
+          <li>• Chat IDs are automatically collected when users send /start</li>
+          <li>• Use "Load Stored IDs" to see all collected chat IDs</li>
+          <li>• Send to all stored users or specify custom chat IDs</li>
           <li>• Check your Telegram chat for bot responses</li>
         </ul>
       </div>
