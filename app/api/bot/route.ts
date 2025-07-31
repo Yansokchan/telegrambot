@@ -9,11 +9,19 @@ const bot = new Bot(process.env.BOT_TOKEN || "");
 bot.command("start", async (ctx) => {
   console.log("🔵 /start command received from:", ctx.chat.id);
   const chatId = ctx.chat.id.toString();
-  const isNew = chatStorage.addChatId(chatId);
+  const username = ctx.from?.username;
+  const firstName = ctx.from?.first_name;
+  const lastName = ctx.from?.last_name;
+
+  const isNew = chatStorage.addUser(chatId, username, firstName, lastName);
 
   const welcomeMessage = isNew
-    ? `Hello! I'm your test bot. Welcome! 🎉\nYour chat ID: ${chatId}\nYou've been added to our broadcast list.`
-    : `Hello again! I'm your test bot. Send me a message or image!\nYour chat ID: ${chatId}`;
+    ? `Hello ${
+        firstName || username || "there"
+      }! I'm your test bot. Welcome! 🎉\nYour chat ID: ${chatId}\nYou've been added to our broadcast list.`
+    : `Hello again ${
+        firstName || username || "there"
+      }! I'm your test bot. Send me a message or image!\nYour chat ID: ${chatId}`;
 
   console.log("📝 Sending welcome message to:", chatId);
   await ctx.reply(welcomeMessage);
@@ -23,9 +31,12 @@ bot.command("start", async (ctx) => {
 bot.on("message:text", async (ctx) => {
   const text = ctx.message.text;
   const chatId = ctx.chat.id.toString();
+  const username = ctx.from?.username;
+  const firstName = ctx.from?.first_name;
+  const lastName = ctx.from?.last_name;
 
-  // Add chat ID if not already stored
-  chatStorage.addChatId(chatId);
+  // Add user if not already stored
+  chatStorage.addUser(chatId, username, firstName, lastName);
 
   await ctx.reply(`You said: ${text}`);
 });
@@ -34,9 +45,12 @@ bot.on("message:text", async (ctx) => {
 bot.on("message:photo", async (ctx) => {
   const photo = ctx.message.photo[ctx.message.photo.length - 1]; // Get the largest photo
   const chatId = ctx.chat.id.toString();
+  const username = ctx.from?.username;
+  const firstName = ctx.from?.first_name;
+  const lastName = ctx.from?.last_name;
 
-  // Add chat ID if not already stored
-  chatStorage.addChatId(chatId);
+  // Add user if not already stored
+  chatStorage.addUser(chatId, username, firstName, lastName);
 
   await ctx.reply("I received your image! 📸");
 
@@ -48,9 +62,12 @@ bot.on("message:photo", async (ctx) => {
 // Handle all other message types
 bot.on("message", async (ctx) => {
   const chatId = ctx.chat.id.toString();
+  const username = ctx.from?.username;
+  const firstName = ctx.from?.first_name;
+  const lastName = ctx.from?.last_name;
 
-  // Add chat ID if not already stored
-  chatStorage.addChatId(chatId);
+  // Add user if not already stored
+  chatStorage.addUser(chatId, username, firstName, lastName);
 
   await ctx.reply("I received your message!");
 });

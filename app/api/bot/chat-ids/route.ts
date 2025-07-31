@@ -3,20 +3,22 @@ import { chatStorage } from "../../../lib/chatStorage";
 
 export async function GET() {
   try {
+    const users = chatStorage.getUsers();
     const chatIds = chatStorage.getChatIds();
 
     return NextResponse.json({
       success: true,
-      chatIds,
-      count: chatIds.length,
-      message: `Found ${chatIds.length} chat IDs`,
+      users,
+      chatIds, // For backward compatibility
+      count: users.length,
+      message: `Found ${users.length} users`,
     });
   } catch (error) {
-    console.error("Error getting chat IDs:", error);
+    console.error("Error getting users:", error);
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to get chat IDs",
+        error: "Failed to get users",
       },
       { status: 500 }
     );
@@ -25,18 +27,18 @@ export async function GET() {
 
 export async function DELETE() {
   try {
-    chatStorage.clearChatIds();
+    chatStorage.clearUsers();
 
     return NextResponse.json({
       success: true,
-      message: "All chat IDs cleared",
+      message: "All users cleared",
     });
   } catch (error) {
-    console.error("Error clearing chat IDs:", error);
+    console.error("Error clearing users:", error);
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to clear chat IDs",
+        error: "Failed to clear users",
       },
       { status: 500 }
     );
